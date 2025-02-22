@@ -1,57 +1,50 @@
-# D3: Data-Driven Documents
+📊 Factors Affecting Student Performance - Interactive Visualization
 
-<a href="https://d3js.org"><img src="https://d3js.org/logo.svg" align="left" hspace="10" vspace="6"></a>
+An interactive data visualization project that explores how various factors influence student academic performance using D3.js.
 
-**D3** (or **D3.js**) is a JavaScript library for visualizing data using web standards. D3 helps you bring data to life using SVG, Canvas and HTML. D3 combines powerful visualization and interaction techniques with a data-driven approach to DOM manipulation, giving you the full capabilities of modern browsers and the freedom to design the right visual interface for your data.
+🔹 Features
 
-## Resources
+✔️ Overview Pie Chart – A clickable pie chart that allows users to explore different categories affecting student performance.
 
-* [API Reference](https://github.com/d3/d3/blob/master/API.md)
-* [Release Notes](https://github.com/d3/d3/releases)
-* [Gallery](https://github.com/d3/d3/wiki/Gallery)
-* [Examples](https://bl.ocks.org/mbostock)
-* [Wiki](https://github.com/d3/d3/wiki)
+✔️ Academic Engagement & Personal Commitment (Bubble Chart) – Displays hours studied, tutoring sessions, attendance, and motivation level against exam scores. Includes:
 
-## Installing
+Dropdown menu for selecting specific factors.
 
-If you use npm, `npm install d3`. Otherwise, download the [latest release](https://github.com/d3/d3/releases/latest). The released bundle supports anonymous AMD, CommonJS, and vanilla environments. You can load directly from [d3js.org](https://d3js.org), [CDNJS](https://cdnjs.com/libraries/d3), or [unpkg](https://unpkg.com/d3/). For example:
+Radio group filters to highlight students based on exam score ranges.
 
-```html
-<script src="https://d3js.org/d3.v5.js"></script>
-```
+Tooltips to show precise exam scores.
 
-For the minified version:
+✔️ Health & Well-being (Bubble Chart) – Visualizes the impact of sleep hours, physical activity, extracurricular activities, and learning disabilities on performance. Includes:
+Slider for physical activity levels.
 
-```html
-<script src="https://d3js.org/d3.v5.min.js"></script>
-```
+Radio buttons for filtering by learning disabilities or extracurricular participation.
 
-You can also use the standalone D3 microlibraries. For example, [d3-selection](https://github.com/d3/d3-selection):
+Tooltips & legend for clarity.
 
-```html
-<script src="https://d3js.org/d3-selection.v1.js"></script>
-```
+✔️ Family Background & Support System (Heatmap & Beeswarm Plot) – Examines the effects of parental involvement, family income, and distance from home on academic results. Includes:
 
-D3 is written using [ES2015 modules](http://www.2ality.com/2014/09/es6-modules-final.html). Create a [custom bundle using Rollup](https://bl.ocks.org/mbostock/bb09af4c39c79cffcde4), Webpack, or your preferred bundler. To import D3 into an ES2015 application, either import specific symbols from specific D3 modules:
+Heatmap with color-coded exam scores to show trends.
 
-```js
-import {scaleLinear} from "d3-scale";
-```
+Beeswarm plot for detailed distribution of scores by family background.
 
-Or import everything into a namespace (here, `d3`):
+Dropdown menu for selecting specific family factors.
 
-```js
-import * as d3 from "d3";
-```
+✔️ Educational Environment & Social Influence (Scatter Plot) – Compares teacher quality, school type, and peer influence with student performance. Includes:
 
-In Node:
+Dropdown menu for factor selection.
 
-```js
-var d3 = require("d3");
-```
+Hover tooltips for exact scores.
 
-You can also require individual modules and combine them into a `d3` object using [Object.assign](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign):
+✔️ Resource Accessibility (Scatter Plot) – Analyzes how internet access and availability of resources impact students' results. Includes:
 
-```js
-var d3 = Object.assign({}, require("d3-format"), require("d3-geo"), require("d3-geo-projection"));
-```
+Dropdown menu to switch between different accessibility factors.
+
+Tooltips for score details.
+
+🛠️ Tech Stack
+
+Frontend: D3.js, JavaScript, HTML, CSS
+
+Data Processing: JSON, CSV
+
+Visualization Techniques: Bubble Charts, Heatmaps, Beeswarm Plots, Scatter Plots, Pie Charts
