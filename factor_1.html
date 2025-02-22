@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assignment 2 Data Visualization for Web</title>		
+  <link rel="stylesheet" type="text/css" href="styles.css"/>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <style type="text/css">
+
+  	body{
+  		background-color: white;
+  	}
+
+    button {
+	  padding: 8px 11px;
+	  font-size: 13px;
+	  background-color: #565656;
+	  color: white;
+	  border: none;
+	  border-radius: 3px;
+	  cursor: pointer;
+	  margin-left: 6px;
+	}
+
+	.container {
+	  display: flex;
+	  gap: 3px;
+	  margin-bottom: 6px;
+	}
+
+	.bubbles {
+	  stroke-width: 2px;
+	  stroke: white;
+	}
+
+	.bubbles:hover {
+	  stroke: black;
+	}
+
+	.tooltip {
+      position: absolute;
+      background-color: grey;
+      border-radius: 8px;
+      padding: 10px;
+      color: white;
+      opacity: 0;
+      pointer-events: none; 
+      transition: opacity 0.2s ease;
+    }
+
+	input[type=radio] {
+	        margin-left: 100px;
+	        margin-right: 2px;
+	}
+
+    select {
+        font-size: 14px;
+        padding: 4px;
+        width: 200px;  
+        margin-bottom: 5px;
+        margin-left: 50px;  
+        background-color: lightgray;  
+        border: 1px solid #ccc;  /* Border*/
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    /* Style for individual options */
+    select option {
+        font-size: 14px;  
+        padding: 5px;
+    }
+
+    
+    h3{
+        font-size: 20px;
+        font-weight: : bold;
+        margin-left: 100px;
+        margin-top: 0px;
+        margin-bottom: 0px;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h3></h3>
+  </div>
+
+  <p>
+  	<!--Dropdown selection for specific factor view -->
+    <div class="container">
+	  <select id="factorSelect">
+	    <option value="Overview" selected>Overview</option>
+	    <option value="Hours Studied factor">Hours Studied</option>
+	    <option value="Tutoring Sessioning factor">Tutoring Sessioning</option>
+	    <option value="Previous Score factor">Previous Score</option>
+	    <option value="Attendance factor">Attendance</option>
+	  </select>
+	  <!--Reset button for factor -->
+	  <button type="button" id="resetButton" style="display: none;">Reset</button>
+	</div>
+
+    <!--Ratio selection for filter (only when factor ratio selected) -->
+    <div class="container">
+	    <div id="ratioDisplay" style="display: none;">
+		  <input type="radio" name="filterScore" value="0" checked="true"> 0
+		  <input type="radio" name="filterScore" value="64"> 64
+		  <input type="radio" name="filterScore" value="72"> 72
+		  <input type="radio" name="filterScore" value="80"> 80
+		</div>
+		<!--Reset button for Exam Score filter-->
+		<button type="button" id="resetButton2" style="display: none;">Reset</button>
+	</div>
+  </p>
+
+  <script type="text/javascript">
+    
+    var margin = {top: 10, right: 170, bottom: 50, left: 60},
+        width = 1580 - margin.left - margin.right,
+        height = 560 - margin.top - margin.bottom;
+
+    var svg = d3.select("body")
+      .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    //background of svg
+    svg.append("rect")
+	  .attr("x", 0)
+	  .attr("y", 0)
+	  .attr("width", width+ 10)   //  width of the SVG
+	  .attr("height", height)  //  height of the SVG
+	  .attr("fill", "#fffef2");
+
+    d3.csv("Student_Performance_Factors_with_50_Rows.csv", function(error, data) {
+      if (error) throw error;
+
+	      data.forEach(function(d) {
+	        d.Hours_Studied = +d.Hours_Studied;
+	        d.Tutoring_Sessions = +d.Tutoring_Sessions;
+	        d.Previous_Scores = +d.Previous_Scores;
+	        d.Attendance = +d.Attendance;
+	        d.Exam_Score = +d.Exam_Score;
+	        d.Motivation_Level = d.Motivation_Level; //string
+	      });
+
+	      var x = d3.scaleSqrt()
+	      	.domain([0, 100])
+	      	.range([0, width]);
+
+
+	      
+	      var y = d3.scaleLinear()
+	      	.domain([d3.min(data, function(d) { return d.Exam_Score -2; }), d3.max(data, function(d) { return d.Exam_Score +0.5; })])
+	      	.range([height, 0]);
+	      
+	      var z = d3.scaleOrdinal()
+	      	.domain(["Low", "Medium", "High"])
+	      	.range([5, 10, 15]);
+
+	      svg.append("g")
+	        .attr("class", "x-axis")
+	        .style("font-size", 13)
+	        .attr("transform", "translate(0," + height + ")")
+	        .call(d3.axisBottom(x).ticks(20));
+
+	      svg.append("g")
+	        .attr("class", "y-axis")
+	        .style("font-size", 13)
+	        .call(d3.axisLeft(y));
+
+	       //x-axis label
+	      var xLabelAxis = svg.append("text")
+	            .attr("x", width /2)
+	            .attr("y", height + margin.bottom-10) // Position below the x-axis
+	            .attr("text-anchor", "middle")
+	            .style("font-size", "14px")
+	            .attr("font-weight", "bold")
+	            .text("Hours Studied / Tutoring Sessions / Previous Scores / Attendance");
+	       
+	       //y-axis label
+	       svg.append("text")
+            .attr("x", margin.top-150)
+            .attr("y", margin.left-100)
+            .attr("dy", "0.32em")
+            .attr("fill", "#000")
+            .attr("font-weight", "bold")
+            .attr("text-anchor", "start")
+            .attr("transform", "rotate(-90)")
+            .attr("text-anchor", "middle")
+            .style("font-size", "14px")
+            .text("Exam Scores");
+
+	      // Tooltip setup
+	      var tooltip = d3.select("body")
+	        .append("div")
+	          .style("opacity", 0)
+	          .attr("class", "tooltip")
+	          .style("background-color", "grey")
+	          .style("border-radius", "8px")
+	          .style("padding", "10px")
+	          .style("color", "white");
+
+	      function showTooltip(d, factor) {
+	        tooltip.transition().duration(200);
+	        tooltip.style("opacity", 1)
+	          .html(factor + ": " + d[factor] + "<br>" + "Exam Score: " + d.Exam_Score)
+	          .style("left", (d3.event.pageX + 10) + "px")
+    		  .style("top", (d3.event.pageY + 10) + "px");
+	      }
+
+	      function moveTooltip(d) {
+	        tooltip.style("left", (d3.event.pageX + 10) + "px")
+    				.style("top", (d3.event.pageY + 10) + "px");
+	      }
+
+	      function hideTooltip(d) {
+	        tooltip.transition().duration(200).style("opacity", 0);
+	      }
+
+	      // Plotting function for individual factors
+	      var dataGroup = svg.append("g").attr("class", "data-group");
+	      
+	      function plotWithFactor(xFactor, colour, xDomain) {
+	        //svg.selectAll(".bubbles").remove();
+	        x.domain(xDomain);
+	        svg.select(".x-axis").transition().duration(1000).call(d3.axisBottom(x));		
+	        dataGroup.selectAll("bubbles")
+		          .data(data)
+		          .enter()
+		          .append("circle")
+		          .attr("class", "bubbles")
+		          .attr("cx", d => x(d[xFactor]))
+		          .attr("cy", d => y(d.Exam_Score))
+		          .attr("r", d => z(d.Motivation_Level))
+		          .style("fill", colour)
+		          .style("opacity", 0.7)
+		          .attr("stroke", "white")
+		          .on("mouseover", function(d) {
+		            showTooltip(d, xFactor);
+		          })
+		          .on("mousemove", moveTooltip)
+		          .on("mouseleave", hideTooltip);
+	      }
+
+	      //plot overview
+		function showOverview(){
+		    // Plot all four factors when "Overview" is selected
+		    plotWithFactor("Hours_Studied", "#69b3a2", [0,100]);
+		    plotWithFactor("Tutoring_Sessions", "#FF6F61", [0,100]);
+		    plotWithFactor("Previous_Scores", "#FFD700", [0,100]);
+		    plotWithFactor("Attendance", "#8A2BE2", [0,100]);
+		  }
+
+	    showOverview(); // Default plot for overview
+
+	    var currentFactor = null;
+	    
+	    var factorColors = {
+		    "Hours Studied factor": "#69b3a2",
+		    "Tutoring Sessioning factor": "#FF6F61",
+		    "Previous Score factor": "#FFD700",
+		    "Attendance factor": "#8A2BE2"
+		};
+
+		var regularFactor = {
+		    "Hours Studied factor": "Hours_Studied",
+		    "Tutoring Sessioning factor": "Tutoring_Sessions",
+		    "Previous Score factor": "Previous_Scores",
+		    "Attendance factor": "Attendance"
+		};
+
+		// Event listener for dropdown list
+		d3.select("#factorSelect").on("change", function() {
+		  var selectedFactor = this.value;
+
+		  dataGroup.selectAll("circle").remove(); // Remove existing circles (even for overview)
+
+		  if (selectedFactor === "Overview") {
+		    d3.select("#ratioDisplay").style("display", "none");
+		    d3.select("#resetButton").style("display", "none");
+		    d3.select("#resetButton2").style("display", "none");
+		    d3.select("#factorSelect").property("value", "Overview");
+		    dataGroup.selectAll("circle").remove();
+		    showOverview();
+		    xLabelAxis.text("Hours Studied / Tutoring Sessions / Previous Scores / Attendance");
+		  } else {
+		   	d3.select("#ratioDisplay").style("display", "block");
+		   	d3.select("#resetButton").style("display", "inline-block");
+		   	d3.select("#resetButton2").style("display", "inline-block").style("margin-right", "10px");
+		   	var radioScores = document.querySelectorAll('input[name="filterScore"]');
+      	radioScores.forEach(button => button.checked = button.value === "0");
+     
+		   	currentFactor = selectedFactor;
+			switch(selectedFactor) {
+			    case "Hours Studied factor":
+			      plotWithFactor("Hours_Studied", "#69b3a2", 
+			                     [d3.min(data, function(d) { return d.Hours_Studied; }), d3.max(data, function(d) { return d.Hours_Studied; })]);
+			      xLabelAxis.text("Hours Studied");
+			      break;
+
+			    case "Tutoring Sessioning factor":
+			      plotWithFactor("Tutoring_Sessions", "#FF6F61",
+			                     [d3.min(data, function(d) { return d.Tutoring_Sessions; }), d3.max(data, function(d) { return d.Tutoring_Sessions; })]);
+			      xLabelAxis.text("Tutoring Sessioning");
+			      break;
+
+			    case "Previous Score factor":
+			      plotWithFactor("Previous_Scores", "#FFD700", 
+			                     [d3.min(data, function(d) { return d.Previous_Scores; }), d3.max(data, function(d) { return d.Previous_Scores; })]);
+			      xLabelAxis.text("Previous Score");
+			      break;
+
+			    case "Attendance factor":
+			      plotWithFactor("Attendance", "#8A2BE2", 
+			                     [d3.min(data, function(d) { return d.Attendance; }), d3.max(data, function(d) { return d.Attendance; })]);
+			      xLabelAxis.text("Attendance");
+			      break;
+
+			    
+			}
+		  }
+
+		  // Event listener for radio button clicks
+		  d3.selectAll('input[name="filterScore"]').on("click", function() {
+
+			var selectedScore = d3.select(this).node().value;
+			var circles = dataGroup.selectAll("circle");
+			circles.style("fill", "grey").style("opacity", 0.7);
+
+			//Filter and highlight based on different conditions
+			circles.filter(function(d) {
+			    if (selectedScore === "64") {
+			      return d.Exam_Score <= 64;
+			    } else if (selectedScore === "72") {
+			      return d.Exam_Score <= 72;
+			    } else if (selectedScore === "80") {
+			      return d.Exam_Score <= 80;
+			    }
+			    return false;
+			}).style("fill", function(d){
+				return factorColors[currentFactor];
+			})
+			.style("opacity", 0.7); 
+			});
+	    	});
+
+			d3.select("#resetButton").on("click", function() {
+				d3.select("#factorSelect").property("value", "Overview");
+			    d3.select("#ratioDisplay").style("display", "none");
+			    d3.select("#resetButton").style("display", "none");
+			    d3.select("#resetButton2").style("display", "none");
+			    dataGroup.selectAll("circle").remove();
+			    showOverview();
+			    xLabelAxis.text("Hours Studied / Tutoring Sessions / Previous Scores / Attendance");
+			});
+
+			d3.select("#resetButton2").on("click", function() {
+				dataGroup.selectAll("circle")
+						 .filter(function(d) {return d.Exam_Score <= 80})
+						 .style("fill", function(d){
+							return factorColors[currentFactor];
+							})
+						.style("opacity", 0.7);
+
+				var radioScores = document.querySelectorAll('input[name="filterScore"]');
+      				radioScores.forEach(button => button.checked = button.value === "0");
+			});
+		});
+		
+		//legend
+		var dataLegend = ["Low", "Medium", "High"];
+		var sizes = { "Low": 5, "Medium": 10, "High": 15 }; 
+		var xCircle = 1380;
+		var xLabel = 1420;
+		var yCircle = 150;
+		const factorColour = [
+    { label: "Hours Studied", color: "#69b3a2" },
+    { label: "Tutoring Sessions", color: "#FF6F61" },
+    { label: "Previous Score", color: "#FFD700" },
+    { label: "Attendance", color: "#8A2BE2" }
+];
+const legendX = 1385; // Adjust the x position of the legend
+const legendY = 175; // Adjust the y position of the legend
+const circleRadius = 10; // Radius for the circles in the legend
+
+
+		// Add legend: circles
+		var legend = svg
+		  .selectAll("legend")
+		  .data(dataLegend)
+		  .enter()
+		  .append("circle")
+		    .attr("cx", xCircle)
+		    .attr("cy", function(d, i) { return yCircle - sizes[d] * 6; }) // Position based on size
+		    .attr("r", function(d) { return sizes[d]; }) // Set radius from sizes mapping
+		    .style("fill", "none")
+		    .attr("stroke", "black");
+
+		// Add legend: segments (doted line)
+		svg
+		  .selectAll("legend-lines")
+		  .data(dataLegend)
+		  .enter()
+		  .append("line")
+		    .attr("x1", function(d) { return xCircle + sizes[d]; })
+		    .attr("x2", xLabel)
+		    .attr("y1", function(d) { return yCircle - sizes[d] * 6; })
+		    .attr("y2", function(d) { return yCircle - sizes[d] * 6; })
+		    .attr("stroke", "black")
+		    .style("stroke-dasharray", ("2,2"));
+
+		// Add legend: labels
+		svg
+		  .selectAll("legend-labels")
+		  .data(dataLegend)
+		  .enter()
+		  .append("text")
+		    .attr("x", xLabel)
+		    .attr("y", function(d) { return yCircle - sizes[d] * 6; })
+		    .text(function(d) { return d; }) // Display "Low", "Medium", "High"
+		    .style("font-size", 14)
+		    .attr("alignment-baseline", "middle");
+		svg
+		  .append("text")
+		    .attr("x", xCircle-19)
+		    .attr("y", yCircle -120)
+		    .attr("font-weight", "bold")
+		    .text("Motivation Level");
+
+		  svg
+		  .append("text")
+			  .attr("x", xCircle+10)
+			  .attr("y", yCircle +5)
+			  .attr("font-weight", "bold")
+			  .text("Factors");
+
+			const legend2 = svg.append("g")
+    .attr("class", "legend")
+    .attr("transform", `translate(${legendX}, ${legendY})`);
+
+// Append circles and text for each legend item
+legend2.selectAll(".legend-item")
+    .data(factorColour)
+    .enter()
+    .append("g")
+    .attr("class", "legend-item")
+    .attr("transform", (d, i) => `translate(0, ${i * 25})`) // Spacing between items
+    .each(function(d) {
+        const group = d3.select(this);
+
+        // Circle
+        group.append("circle")
+            .attr("cx", 0) // Circle's x position
+            .attr("cy", 0) // Circle's y position
+            .attr("r", circleRadius)
+            .style("fill", d.color)
+            .attr("stroke", "black");
+
+        // Text
+        group.append("text")
+            .attr("x", circleRadius * 1.5) // Text offset from the circle
+            .attr("y", 5) // Align text with the circle
+            .attr("fill", "black")
+            .style("font-size", "13px")
+            .text(d.label);
+});
+
+
+  </script>
+</body>
+</html>

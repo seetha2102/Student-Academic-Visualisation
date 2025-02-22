@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Assignment 2</title>
+    <link rel="stylesheet" type="text/css" href="styles.css"/>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <style>
+        body {
+        background-color: white;
+            font-family: Arial, sans-serif;
+
+        }
+
+        /* Main container for all controls */
+        #controlsContainer {
+            width: 900px;
+            margin: 20px;
+        }
+
+        /* Reset button and label container */
+        .top-controls {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        #resetButtonLabel {
+            margin-left: 8px;
+            cursor: pointer;
+            padding: 5px;
+            background-color: white;
+            color: black;
+        }
+
+        #resetButton:checked + #resetButtonLabel {
+            background-color: blue;
+            color: white;
+        }
+
+        /* Container for slider and two radio buttons */
+        .bottom-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Slider styling */
+        #activitySlider {
+            width: 150px;
+        }
+
+        #activityLabel {
+            margin-left: 5px;
+            cursor: pointer;
+        }
+
+    .tooltip {
+      position: absolute;
+      background-color: grey;
+      border-radius: 8px;
+      padding: 10px;
+      color: white;
+      opacity: 0;
+      pointer-events: none; 
+      transition: opacity 0.2s ease;
+    }
+
+
+        /* Styling for radio button labels */
+        label {
+            padding: 5px;
+            background-color: white;
+            color: black;
+            cursor: pointer;
+        }
+
+        input:checked + label {
+            background-color: blue;
+            color: white;
+        }
+
+        
+    </style>
+</head>
+<body>
+    <div id="controlsContainer">
+        <!-- Top controls: Reset Button -->
+        <div class="top-controls">
+            <input type="radio" id="resetButton" name="graphControl" value="reset">
+            <label id="resetButtonLabel" for="resetButton">Reset</label>
+        </div>
+
+        <!-- Bottom controls: Slider and radio buttons side by side -->
+        <div class="bottom-controls">
+            <div>
+                <input type="range" id="activitySlider" min="1" max="5" step="1" value="3">
+                <label for="activitySlider" id="activityLabel">Physical Activity</label>
+            </div>
+            <div>
+                <input type="radio" id="learnDisButton" name="graphControl" value="learningDisability">
+                <label for="learnDisButton">Learning Disabilities</label>
+            </div>
+            <div>
+                <input type="radio" id="xtraCurrButton" name="graphControl" value="extraCurricular">
+                <label for="xtraCurrButton">Extracurricular Activities</label>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+// Dimensions and margins
+const margin = {top: 15, right: 30, bottom: 50, left: 5};
+const width = 600 - margin.left - margin.right; 
+const height = 520 - margin.top - margin.bottom;
+
+// Add an SVG element to the body
+const svg = d3.select("body")
+    .append("svg")
+    .attr("width", width * 3.6 + margin.left + margin.right)
+    .attr("height", height * 1.2 + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+// Load data from CSV file 
+d3.csv("Student_Performance_Factors_with_50_Rows.csv", function(error, data) {
+    if (error) {
+        throw error;
+    }
+
+    // Convert data from strings to numbers 
+    data.forEach(function(d) {
+        d.Sleep_Hours = +d.Sleep_Hours;
+        d.Exam_Score = +d.Exam_Score;
+        d.Physical_Activity = +d.Physical_Activity;
+        d.Extracurricular_Activities = d.Extracurricular_Activities === "Yes";
+        d.Learning_Disabilities = d.Learning_Disabilities === "Yes";
+    });
+
+    // Call the function to create the bubble plot after data is processed
+    createBubblePlot(data);
+
+    // Display bubbles corresponding to physical activity level 3 by default
+    document.getElementById("resetButton").checked = true;
+
+
+});
+
+
+// Function to create the bubble plot
+function createBubblePlot(data) {
+    const width = 1550;
+    const height = 600;
+    const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+
+    // Scales for axes
+    const x = d3.scaleLinear()
+        .domain([3,12])
+        .range([margin.left, width - margin.right]);
+
+    const y = d3.scaleLinear()
+        .domain([55,80])
+        .range([height - margin.bottom, margin.top]);
+
+    // Scale for bubble size based on Physical_Activity
+    const size = d3.scaleLinear()
+        .domain(d3.extent(data, d => d.Physical_Activity))
+        .range([15, 50]); // Adjust the range for bubble size as needed
+
+    // Axis
+    svg.append("g")
+        .attr("transform", `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x))
+        .append("text")
+        .attr("font-size", 12)
+        .attr("font-weight", "bold")
+        .attr("x", width / 2)
+        .attr("y", 35)
+        .attr("fill", "black")
+        .text("Sleep Hours/Physical Activity/Learning Disabilities/Extracurricular Activities");
+
+    svg.append("g")
+        .attr("transform", `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y))
+        .append("text")
+        .attr("font-size", 12)
+        .attr("font-weight", "bold")
+        .attr("x", -margin.left + 70)
+        .attr("y", margin.top)
+        .attr("dy", "-1em")
+        .attr("fill", "black")
+        .text("Exam Score");
+
+    // Define gradients
+    const defs = svg.append("defs");
+
+    // Gradient for red
+    const gradientRed = defs.append("linearGradient")
+        .attr("id", "gradientRed")
+        .attr("x1", "0%")
+        .attr("y1", "0%")
+        .attr("x2", "100%")
+        .attr("y2", "100%");
+
+    gradientRed.append("stop").attr("offset", "0%").attr("stop-color", "red");
+    gradientRed.append("stop").attr("offset", "100%").attr("stop-color", "darkred");
+
+    // Gradient for blue
+    const gradientBlue = defs.append("linearGradient")
+        .attr("id", "gradientBlue")
+        .attr("x1", "0%")
+        .attr("y1", "0%")
+        .attr("x2", "100%")
+        .attr("y2", "100%");
+
+    gradientBlue.append("stop").attr("offset", "0%").attr("stop-color", "blue");
+    gradientBlue.append("stop").attr("offset", "100%").attr("stop-color", "darkblue");
+
+
+    // Tooltip setup
+          const tooltip = d3.select("body")
+            .append("div")
+              .style("opacity", 0)
+              .attr("class", "tooltip")
+              .style("background-color", "grey")
+              .style("border-radius", "8px")
+              .style("padding", "10px")
+              .style("color", "white");
+
+          function showTooltip(d, factor) {
+            tooltip.transition().duration(200);
+            tooltip.style("opacity", 1)
+              .html("Sleep Hours: " + d.Sleep_Hours + "<br>" + "Exam Score: " + d.Exam_Score)
+              .style("left", (d3.event.pageX + 10) + "px")
+              .style("top", (d3.event.pageY + 10) + "px");
+          }
+
+          function moveTooltip(d) {
+            tooltip.style("left", (d3.event.pageX + 10) + "px")
+                    .style("top", (d3.event.pageY + 10) + "px");
+          }
+
+          function hideTooltip(d) {
+            tooltip.transition().duration(200).style("opacity", 0);
+          }
+
+
+
+
+    // Plot bubbles with dynamic gradient and opacity based on Learning_Disabilities and Extracurricular_Activities
+    const bubbles = svg.selectAll("circle")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("cx", d => x(d.Sleep_Hours))
+        .attr("cy", d => y(d.Exam_Score))
+        .attr("r", d => size(d.Physical_Activity)) // Bubble radius based on Physical Activity
+        .attr("fill", d => d.Learning_Disabilities ? "url(#gradientRed)" : "url(#gradientBlue)")
+        .style("opacity", d => d.Extracurricular_Activities ? 1 : 0.5) // Set opacity based on Extracurricular_Activities
+        .on("mouseover", function(d) {
+            console.log(d);
+        showTooltip(d);
+        d3.select(this).style("stroke", "black").style("stroke-width", 2); // Add stroke on hover
+    })
+        .on("mousemove", moveTooltip)
+        .on("mouseleave", function() {
+        hideTooltip();
+        d3.select(this).style("stroke", "none"); // Remove stroke after hover
+    });
+
+        // add sliders for physical act 1-5
+            //On change, update styling
+           function updateBubbles(activityLevel) {
+        bubbles
+            .attr("display", d => d.Physical_Activity === activityLevel ? null : "none");
+    }
+
+    
+
+    // Listen for changes on the slider and filter bubbles accordingly
+    d3.select("#activitySlider").on("input", function() {
+        const selectedLevel = +this.value; // Get the current slider value
+        updateBubbles(selectedLevel);
+        document.getElementById("resetButton").checked = false;
+        document.getElementById("learnDisButton").checked = false;
+        document.getElementById("xtraCurrButton").checked = false;
+    });
+
+    // Initial display based on the default slider value
+    
+
+// Add event listener to reset button
+document.getElementById("resetButton").addEventListener("click", function() {
+    if (this.checked) {
+        // Call reset function when radio button is checked
+        bubbles.attr("display", null); // Show all bubbles by resetting the display attribute
+    }
+
+    
+});
+
+// add buttons for learning disability & extra curricular act
+document.getElementById("learnDisButton").addEventListener("click", function() {
+    if (this.checked) {
+        bubbles.attr("display", d => d.Learning_Disabilities ? "block" : "none");
+          
+    }
+
+    
+});
+
+document.getElementById("xtraCurrButton").addEventListener("click", function() {
+    if (this.checked) {
+        bubbles.attr("display", d => d.Extracurricular_Activities ? "block" : "none");
+          
+    }
+
+    
+});
+
+
+// Legend container
+const legend = svg.append("g")
+    .attr("transform", `translate(${1350},${-5})`);
+
+// Size Legend
+legend.append("text")
+    .attr("x", 0)
+    .attr("y", 0)
+    .text("Size: Physical Activity")
+    .style("font-size", "12px")
+    .style("font-weight", "bold");
+
+const sizeValues = [15, 23.75, 32.5, 41.25, 50]; // Example sizes
+sizeValues.forEach((size, i) => {
+    legend.append("circle")
+        .attr("cx", 20)
+        .attr("cy", 20 + i * 40)
+        .attr("r", size / 3) // Scale down for legend
+        .attr("fill", "gray");
+
+    legend.append("text")
+        .attr("x", 50)
+        .attr("y", 20 + i * 40)
+        .attr("dy", "0.35em")
+        .style("font-size", "12px")
+        .text(`Level ${i + 1}`);
+});
+
+// Color Legend
+legend.append("text")
+    .attr("x", 0)
+    .attr("y", 210)
+    .text("Colour: Learning Disabilities")
+    .style("font-size", "12px")
+    .style("font-weight", "bold");
+
+legend.append("circle")
+    .attr("cx", 20)
+    .attr("cy", 233)
+    .attr("r", 10)
+    .attr("fill", "url(#gradientRed)");
+
+legend.append("text")
+    .attr("x", 50)
+    .attr("y", 230)
+    .attr("dy", "0.35em")
+    .style("font-size", "12px")
+    .text("With Disabilities");
+
+legend.append("circle")
+    .attr("cx", 20)
+    .attr("cy", 255)
+    .attr("r", 10)
+    .attr("fill", "url(#gradientBlue)");
+
+legend.append("text")
+    .attr("x", 50)
+    .attr("y", 252)
+    .attr("dy", "0.35em")
+    .style("font-size", "12px")
+    .text("No Disabilities");
+
+// Opacity Legend
+legend.append("text")
+    .attr("x", 0)
+    .attr("y", 280)
+    .text("Opacity: Extracurricular Activities")
+    .style("font-size", "12px")
+    .style("font-weight", "bold");
+
+legend.append("circle")
+    .attr("cx", 20)
+    .attr("cy", 300)
+    .attr("r", 10)
+    .attr("fill", "gray")
+    .style("opacity", 1);
+
+legend.append("text")
+    .attr("x", 50)
+    .attr("y", 297)
+    .attr("dy", "0.35em")
+    .style("font-size", "12px")
+    .text("Active");
+
+legend.append("circle")
+    .attr("cx", 20)
+    .attr("cy", 322)
+    .attr("r", 10)
+    .attr("fill", "gray")
+    .style("opacity", 0.5);
+
+legend.append("text")
+    .attr("x", 50)
+    .attr("y", 320)
+    .attr("dy", "0.35em")
+    .style("font-size", "12px")
+    .text("Inactive");
+
+
+
+
+
+
+
+}
+
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+

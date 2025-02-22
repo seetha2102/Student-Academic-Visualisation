@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resource Accessibility</title>
+    <link rel="stylesheet" href="A2(2)styles.css">
+</head>
+<body>
+    <h1></h1>
+
+    <!-- Dropdown to select the factor -->
+    <label for="factor">Choose a factor:</label>
+    <select id="factor">
+        <option value="Access_to_Resources">Access to Resources</option>
+        <option value="Internet_Access">Internet Access</option>
+    </select>
+
+    <div id="chart"></div> 
+
+    <div id="tooltip"></div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script type="text/javascript">
+        const margin = { top: 20, right: 30, bottom: 90, left: 90 };
+const width = 1500 - margin.left - margin.right;
+const height = 600 - margin.top - margin.bottom;
+
+const svg = d3.select("#chart")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+const xScale = d3.scaleBand().rangeRound([0, width]).padding(0.1);
+const yScale = d3.scaleLinear().range([height, 0]);
+
+svg.append("g").attr("class", "x-axis").attr("transform", `translate(0, ${height})`);
+svg.append("g").attr("class", "y-axis");
+
+svg.append("text")
+    .attr("class", "x-axis-label")
+    .attr("x", width / 2)
+    .attr("y", height + 60)
+    .attr("text-anchor", "middle")
+    .text("Factor");
+
+svg.append("text")
+    .attr("class", "y-axis-label")
+    .attr("x", -height / 2)
+    .attr("y", -60)
+    .attr("text-anchor", "middle")
+    .attr("transform", "rotate(-90)")
+    .text("Exam Score");
+
+const tooltip = d3.select("#tooltip").style("opacity", 0);
+
+// Load data and create chart
+d3.csv("Student_Performance_Factors_with_50_Rows.csv").then(function(data) {
+    data.forEach(function(d) {
+        d.Exam_Score = +d.Exam_Score; // Ensure Exam_Score is numeric
+    });
+
+    const categoryDomains = {
+        Access_to_Resources: ["Low", "Medium", "High"],
+        Internet_Access: ["Yes", "No"],
+    };
+
+    const factorLabels = {
+        Access_to_Resources: "Access to Resources",
+        Internet_Access: "Internet Access",
+    };
+
+    const updateChart = function(factor) {
+        console.log(`Updating chart with factor: ${factor}`);
+        
+        if (!categoryDomains[factor]) {
+            console.error("Selected factor is not recognized:", factor);
+            return;
+        }
+
+        const categories = categoryDomains[factor];
+        console.log("Categories for selected factor:", categories); // Log categories
+
+        // Filter data based on selected factor
+        const filteredData = data.filter(d => categories.includes(d[factor]));
+        console.log("Filtered Data based on factor:", filteredData); // Log filtered data
+
+        xScale.domain(categories); // Set the categories dynamically based on the selected factor
+        yScale.domain([54, d3.max(filteredData, function(d) { return d.Exam_Score; })]);
+
+        svg.select(".x-axis").call(d3.axisBottom(xScale)); 
+        svg.select(".y-axis").call(d3.axisLeft(yScale)); 
+
+        const points = svg.selectAll(".point").data(filteredData);
+
+        // Enter selection to add new points
+        points.enter()
+        .append("circle")
+        .attr("class", "point")
+        .attr("cx", function(d) {
+            const value = d[factor];
+            return xScale(value) + xScale.bandwidth() / 2; // Adjust the x-position of points
+        })
+        .attr("cy", function(d) {
+            return yScale(d.Exam_Score); // Set the vertical position based on Exam_Score
+        })
+        .attr("r", 10)
+        .attr("fill", "blue")
+        .attr("opacity", 1)
+        .on("mouseover", function(event, d) {
+            d3.select(this).style("stroke", "black").style("stroke-width", 2);
+            const examScore = d.Exam_Score; 
+
+            tooltip.transition().duration(200).style("opacity", 1);
+            tooltip.style("visibility", "visible")
+                .html(`Exam Score: ${examScore}`) 
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY + 10) + "px");
+        })
+        .on("mousemove", function(event) {
+            tooltip.style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY + 10) + "px");
+        })
+        .on("mouseout", function() {
+             d3.select(this).style("stroke", "none");
+            tooltip.transition().duration(200).style("opacity", 0);
+            tooltip.style("visibility", "hidden");
+        });
+
+        // Update existing points
+        points.attr("cx", function(d) {
+            const value = d[factor];
+            return xScale(value) + xScale.bandwidth() / 2; // Adjust the x-position of points
+        })
+        .attr("cy", function(d) {
+            return yScale(d.Exam_Score);
+        });
+
+        // Remove old points
+        points.exit().remove(); 
+    };
+
+    // Initial chart update with Access_to_Resources
+    updateChart("Access_to_Resources");
+
+    // Update chart on factor change
+    d3.select("#factor").on("change", function () {
+        updateChart(this.value);
+    });
+});
+
+
+
+    </script> 
+</body>
+</html>

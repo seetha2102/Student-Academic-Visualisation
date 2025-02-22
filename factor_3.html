@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heatmap and Beeswarm Plot</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            margin: 20px;
+        }
+        .chart-container {
+            width: 1600px;
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .chart-title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .legend {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        select, input[type="range"] {
+            margin: 5px;
+            padding: 5px;
+            font-size: 14px;
+        }
+        .tooltip {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 12px;
+            display: none;
+            pointer-events: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        svg text {
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Heatmap Section -->
+        <div class="chart-container">
+            <div id="heatmap"></div>
+            <div class="legend" id="heatmap-legend"></div>
+        </div>
+
+        <!-- Beeswarm Section -->
+        <div class="chart-container">
+            <div class="controls">
+                <label for="factor-select">Filter by Factor:</label>
+                <select id="factor-select"></select>
+
+                <label for="y-range-slider">Adjust Dot Size:</label>
+                <input type="range" id="y-range-slider" min="5" max="20" step="1" value="10">
+                <span id="y-range-value">10</span>
+            </div>
+            <div id="beeswarm"></div>
+            <div class="legend" id="beeswarm-legend"></div>
+        </div>
+    </div>
+
+    <script>
+        // (Keep the JavaScript code largely as it is, making only minor adjustments for layout updates)
+
+        const gradingRanges = [
+            { range: "Fail", min: 0, max: 49, color: "red" },
+            { range: "Pass", min: 50, max: 64, color: "orange" },
+            { range: "Credit", min: 65, max: 74, color: "yellow" },
+            { range: "Distinction", min: 75, max: 84, color: "green" },
+            { range: "High Distinction", min: 85, max: 110, color: "blue" }
+        ];
+
+        const margin = { top: 20, right: 0, bottom: 50, left: 100 };
+        const width = 1500 - margin.left - margin.right;
+        const heatmapHeight = 700 - margin.top - margin.bottom;
+        const beeswarmHeight = 600 - margin.top - margin.bottom;
+
+        // Heatmap SVG
+        const svgHeatmap = d3.select("#heatmap")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", heatmapHeight + margin.top + margin.bottom + 100)
+            .append("g")
+            .attr("transform", `translate(${margin.left + 50}, ${margin.top})`);
+
+        // Beeswarm SVG
+        const svgBeeswarm = d3.select("#beeswarm")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", beeswarmHeight + margin.top + margin.bottom + 100)
+            .append("g")
+            .attr("transform", `translate(${margin.left + 20}, ${margin.top})`);
+
+        const tooltip = d3.select("body").append("div").attr("class", "tooltip");
+
+        d3.csv("Student_Performance_Factors_with_50_Rows.csv").then(data => {
+            // (Retain your existing code for generating the heatmap and beeswarm plots)
+            // Update the legend elements in the #heatmap-legend and #beeswarm-legend containers.
+            const factors = ["Parental_Involvement", "Parental_Education_Level", "Distance_from_Home", "Family_Income"];
+
+            const xScaleHeatmap = d3.scaleBand()
+                .domain(data.map((_, i) => i + 1))
+                .range([0, (width - 60)])
+                .padding(0.2);
+
+            const yScaleHeatmap = d3.scaleBand()
+                .domain(factors)
+                .range([0, heatmapHeight])
+                .padding(0.08);
+
+            svgHeatmap.append("g").call(d3.axisLeft(yScaleHeatmap));
+            svgHeatmap.append("g")
+                .attr("transform", `translate(0, ${heatmapHeight})`)
+                .call(d3.axisBottom(xScaleHeatmap));
+
+            function updateHeatmap() {
+                const heatmapData = [];
+                data.forEach((d, i) => {
+                    factors.forEach(factor => {
+                        const score = +d.Exam_Score;
+                        const grade = gradingRanges.find(g => score >= g.min && score <= g.max);
+                        heatmapData.push({ 
+                            x: i + 1, 
+                            y: factor, 
+                            score, 
+                            grade,
+                            factorValue: d[factor]
+                        });
+                    });
+                });
+
+                
+                // Define a filter for the box-shadow effect
+                const filter = svgHeatmap.append("defs")
+                    .append("filter")
+                    .attr("id", "box-shadow")
+                    .attr("x", "-20%")
+                    .attr("y", "-20%")
+                    .attr("width", "140%")
+                    .attr("height", "140%");
+
+                filter.append("feDropShadow")
+                    .attr("dx", "2")  // Horizontal shadow offset
+                    .attr("dy", "2")  // Vertical shadow offset
+                    .attr("stdDeviation", "2")  // Blur radius
+                    .attr("flood-color", "black")  // Shadow color
+                    .attr("flood-opacity", "0.3");  // Shadow opacity
+
+                const rects = svgHeatmap.selectAll("rect").data(heatmapData, d => `${d.x}-${d.y}`);
+
+
+                 rects.enter()
+                    .append("rect")
+                    .merge(rects)
+                    .attr("x", d => xScaleHeatmap(d.x))
+                    .attr("y", d => yScaleHeatmap(d.y))
+                    .attr("width", xScaleHeatmap.bandwidth())
+                    .attr("height", yScaleHeatmap.bandwidth())
+                    .attr("fill", d => d.grade.color)
+                    .attr("opacity", d => d.score / 100)  // Opacity based on score
+                    .attr("filter", "url(#box-shadow)")  // Apply the box-shadow filter
+                    .on("mouseover", function(event, d) {
+                        d3.select(this).style("stroke", "black").style("stroke-width", 2).style("box-shadow");
+                        tooltip.style("display", "block").style("width", "10rem").style("font-size", "1em")
+                            .html(`
+                                <strong>Factor:</strong> ${d.factorValue}<br><br>
+                                <strong>Exam Score:</strong> ${d.score}<br><br>
+                                <strong>Grading:</strong> ${d.grade.range}
+                            `)
+                            .style("left", `${event.pageX + 5}px`) 
+                            .style("top", `${event.pageY + 5}px`); 
+                    })
+                    .on("mousemove", function(event) {
+                        tooltip.style("left", `${event.pageX + 5}px`)
+                            .style("top", `${event.pageY + 5}px`);
+                    })
+                    .on("mouseout", function() {
+                        d3.select(this).style("stroke", "none");
+                        tooltip.style("display", "none");
+                    });
+
+                rects.exit().remove();
+
+
+
+
+            }
+
+            let dotSize = 10;  // Initial size of the dot
+
+            function createBeeswarmPlot(selectedFactor) {
+
+                const filter = svgBeeswarm.append("defs")
+                    .append("filter")
+                    .attr("id", "box-shadow")
+                    .attr("x", "-20%")
+                    .attr("y", "-20%")
+                    .attr("width", "140%")
+                    .attr("height", "140%");
+
+                filter.append("feDropShadow")
+                    .attr("dx", "2")  // Horizontal shadow offset
+                    .attr("dy", "2")  // Vertical shadow offset
+                    .attr("stdDeviation", "2")  // Blur radius
+                    .attr("flood-color", "black")  // Shadow color
+                    .attr("flood-opacity", "0.3");  // Shadow opacity
+
+
+                const categories = Array.from(new Set(data.map(d => d[selectedFactor])));
+
+                const xScaleBeeswarm = d3.scaleLinear()
+                    .domain([0, 110])  // From 0 to 110
+                    .range([0, width - 80])
+                    .nice();
+
+                // Create ticks every 5 units
+                xScaleBeeswarm.ticks(22);  // 22 ticks for every 5 units (5, 10, 15, ..., 110)
+
+                const yScaleBeeswarm = d3.scaleBand()
+                    .domain(categories)
+                    .range([0, beeswarmHeight])
+                    .padding(0.5);
+
+                svgBeeswarm.html("");  // Clear previous content
+                svgBeeswarm.append("g").call(d3.axisLeft(yScaleBeeswarm));
+                svgBeeswarm.append("g")
+                    .attr("transform", `translate(0, ${beeswarmHeight})`)
+                    .call(d3.axisBottom(xScaleBeeswarm));
+
+                const beeswarmData = categories.map(category => {
+                    const scores = data.filter(d => d[selectedFactor] === category).map(d => +d.Exam_Score);
+                    return { category, scores };
+                });
+
+                const jitterWidth = 10;  // Adjust for better spacing of points
+
+                beeswarmData.forEach((categoryData) => {
+                    const category = categoryData.category;
+                    const scores = categoryData.scores;
+
+                    scores.forEach(score => {
+                        const grade = gradingRanges.find(g => score >= g.min && score <= g.max);
+                        const x = xScaleBeeswarm(score);
+                        let y = yScaleBeeswarm(category);
+                        let dotX = x + Math.random() * jitterWidth - jitterWidth / 2;
+                        let dotY = y + Math.random() * yScaleBeeswarm.bandwidth() - yScaleBeeswarm.bandwidth() / 2;
+
+                        svgBeeswarm.append("circle")
+                            .attr("cx", dotX)
+                            .attr("cy", dotY)
+                            .attr("r", dotSize)
+                            .attr("fill", grade.color)
+                            .attr("opacity", score / 100)  // Opacity based on score
+                            .attr("filter", "url(#box-shadow)")
+                            .on("mouseover", function(event, d) {
+                                 d3.select(this).style("stroke", "black").style("stroke-width", 2).style("box-shadow");
+                                tooltip.style("display", "block").style("width", "10rem").style("font-size", "1em")
+                                    .html(`
+                                        <strong>Category:</strong> ${category}<br><br>
+                                        <strong>Exam Score:</strong> ${score}<br><br>
+                                        <strong>Grading:</strong> ${grade.range}
+                                    `)
+                                    .style("left", `${event.pageX + 5}px`)
+                                    .style("top", `${event.pageY + 5}px`);
+                            })
+                            .on("mousemove", function(event) {
+                                tooltip.style("left", `${event.pageX + 5}px`)
+                                    .style("top", `${event.pageY + 5}px`);
+                            })
+                            .on("mouseout", function() {
+                                d3.select(this).style("stroke", "none");
+                                tooltip.style("display", "none");
+                            });
+                    });
+                });
+
+                // Update title dynamically based on selected factor
+                svgBeeswarm.append("text")
+                    .attr("class", "title")
+                    .attr("x", width/2)
+                    .attr("y", 5)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "30px")
+                    .style("font-weight", "bold")
+                    .text(`Beeswarm Plot for ${selectedFactor}`);
+            }
+
+            const factorSelect = d3.select("#factor-select");
+            factors.forEach(factor => {
+                factorSelect.append("option").text(factor).attr("value", factor);
+            });
+
+            factorSelect.on("change", function() {
+                const selectedFactor = this.value;
+                createBeeswarmPlot(selectedFactor);
+            });
+
+            createBeeswarmPlot(factors[0]);
+
+            d3.select("#y-range-slider").on("input", function() {
+                dotSize = +this.value;
+                d3.select("#y-range-value").text(dotSize);
+                createBeeswarmPlot(factorSelect.property("value"));
+            });
+
+            updateHeatmap();
+
+            // Add Heatmap legend
+            const heatmapLegendGroup = svgHeatmap.append("g")
+                .attr("transform", `translate(${margin.left + 20}, ${heatmapHeight + margin.top + 20})`);
+
+            // Add Legend Title
+            heatmapLegendGroup.append("text")
+                .attr("x", 40)
+                .attr("y", 70)  
+                .text("Exam Score by Grading Ranges")
+                .style("font-size", "14px")
+                .style("font-weight", "bold");
+
+            // Add the gradient
+            const gradient = svgHeatmap.append("defs")
+                .append("linearGradient")
+                .attr("id", "legend-gradient")
+                .attr("x1", "0%")
+                .attr("x2", "100%")
+                .attr("y1", "0%")
+                .attr("y2", "0%");
+
+            gradingRanges.forEach((range, index) => {
+                const offset = (index / (gradingRanges.length - 1)) * 100;
+                gradient.append("stop")
+                    .attr("offset", `${offset}%`)
+                    .attr("stop-color", range.color)
+                    .attr("stop-opacity", index === 0 ? 0 : 1);  // Set min opacity to 0
+            });
+
+            heatmapLegendGroup.append("rect")
+                .attr("x", 0)
+                .attr("y", 10)
+                .attr("width", 300)
+                .attr("height", 20)
+                .style("fill", "url(#legend-gradient)")
+                .attr("stroke", "black");
+
+            heatmapLegendGroup.append("text")
+                .attr("x", 0)
+                .attr("y", 45)
+                .text(gradingRanges[0].min)
+                .style("font-size", "12px");
+
+            heatmapLegendGroup.append("text")
+                .attr("x", 300)
+                .attr("y", 45)
+                .text(gradingRanges[gradingRanges.length - 1].max)
+                .style("font-size", "12px")
+                .style("text-anchor", "end");
+
+            // Add Beeswarm Legend
+            const beeswarmLegendGroup = svgBeeswarm.append("g")
+                .attr("transform", `translate(${margin.left + 20}, ${beeswarmHeight + margin.top + 40})`);
+
+            // Add Legend Title
+            beeswarmLegendGroup.append("text")
+                .attr("x", 40)
+                .attr("y", 70)  // Position it above the legend
+                .text("Exam Score by Grading Ranges")
+                .style("font-size", "14px")
+                .style("font-weight", "bold");
+
+            // Add the gradient for beeswarm legend
+            const gradientBeeswarm = svgBeeswarm.append("defs")
+                .append("linearGradient")
+                .attr("id", "beeswarm-legend-gradient")
+                .attr("x1", "0%")
+                .attr("x2", "100%")
+                .attr("y1", "0%")
+                .attr("y2", "0%");
+
+            gradingRanges.forEach((range, index) => {
+                const offset = (index / (gradingRanges.length - 1)) * 100;
+                gradientBeeswarm.append("stop")
+                    .attr("offset", `${offset}%`)
+                    .attr("stop-color", range.color)
+                    .attr("stop-opacity", index === 0 ? 0 : 1);  // Set min opacity to 0
+            });
+
+            beeswarmLegendGroup.append("rect")
+                .attr("x", 0)
+                .attr("y", 10)
+                .attr("width", 300)
+                .attr("height", 20)
+                .style("fill", "url(#beeswarm-legend-gradient)")
+                .attr("stroke", "black");
+
+            beeswarmLegendGroup.append("text")
+                .attr("x", 0)
+                .attr("y", 45)
+                .text(gradingRanges[0].min)
+                .style("font-size", "12px");
+
+            beeswarmLegendGroup.append("text")
+                .attr("x", 300)
+                .attr("y", 45)
+                .text(gradingRanges[gradingRanges.length - 1].max)
+                .style("font-size", "12px")
+                .style("text-anchor", "end");
+        });
+    </script>
+</body>
+</html>

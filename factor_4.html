@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Educational Environment & Social Influence</title>
+    <link rel="stylesheet" href="A2styles.css">
+</head>
+<body>
+    <h1></h1>
+
+    <!-- Dropdown to select the factor -->
+    <label for="factor">Choose a factor:</label>
+    <select id="factor">
+        <option value="Teacher_Quality">Teacher Quality</option>
+        <option value="School_Type">School Type</option>
+        <option value="Peer_Influence">Peer Influence</option>
+    </select>
+
+    <div id="chart"></div> 
+
+    
+    <div id="tooltip"></div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script type="text/javascript">
+        const margin = { top: 20, right: 30, bottom: 90, left: 90 };
+const width = 1500 - margin.left - margin.right;
+const height = 600 - margin.top - margin.bottom;
+
+const svg = d3.select("#chart")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+const xScale = d3.scaleBand().rangeRound([0, width]).padding(0.1);
+const yScale = d3.scaleLinear().range([height, 0]);
+
+svg.append("g").attr("class", "x-axis").attr("transform", `translate(0, ${height})`);
+svg.append("g").attr("class", "y-axis");
+
+svg.append("text")
+    .attr("class", "x-axis-label")
+    .attr("x", width / 2)
+    .attr("y", height + 60)
+    .attr("text-anchor", "middle")
+    .text("Factor");
+
+svg.append("text")
+    .attr("class", "y-axis-label")
+    .attr("x", -height / 2)
+    .attr("y", -60)
+    .attr("text-anchor", "middle")
+    .attr("transform", "rotate(-90)")
+    .text("Exam Score");
+
+const tooltip = d3.select("#tooltip").style("opacity", 0);
+
+d3.csv("Student_Performance_Factors_with_50_Rows.csv").then(function(data) {
+    data.forEach(function(d) {
+        d.Exam_Score = +d.Exam_Score; // Ensure Exam_Score is numeric
+    });
+
+    const categoryDomains = {
+        Teacher_Quality: ["Low", "Medium", "High"],
+        School_Type: ["Private", "Public"],
+        Peer_Influence: ["Negative", "Neutral", "Positive"],
+    };
+
+    const factorLabels = {
+        Teacher_Quality: "Teacher Quality",
+        School_Type: "School Type",
+        Peer_Influence: "Peer Influence",
+    };
+
+    // Function to update the chart and tooltip
+    const updateChart = function(factor) {
+        console.log(`Updating chart with factor: ${factor}`);
+        
+        if (!categoryDomains[factor]) {
+            console.error("Selected factor is not recognized:", factor);
+            return;
+        }
+
+        const categories = categoryDomains[factor];
+        xScale.domain(categories); // Set the categories dynamically based on the selected factor
+        yScale.domain([54, d3.max(data, function(d) { return d.Exam_Score; })]);
+
+        svg.select(".x-axis").call(d3.axisBottom(xScale)); 
+        svg.select(".y-axis").call(d3.axisLeft(yScale)); 
+
+        const points = svg.selectAll(".point").data(data);
+
+        points.enter()
+        .append("circle")
+        .attr("class", "point")
+        .attr("cx", function(d) {
+            const value = d[factor];
+            return xScale(value) + xScale.bandwidth() / 2; // Position the points correctly
+        })
+        .attr("cy", function(d) {
+            return yScale(d.Exam_Score); // Set the vertical position based on Exam_Score
+        })
+        .attr("r", 10)
+        .attr("fill", "blue")
+        .attr("opacity", 1)
+        .on("mouseover", function(event, d) {
+            d3.select(this).style("stroke", "black").style("stroke-width", 2);
+            const examScore = d.Exam_Score; 
+
+            tooltip.transition().duration(200).style("opacity", 1);
+            tooltip.style("visibility", "visible")
+                .html(`Exam Score: ${examScore}`) 
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY + 10) + "px");
+        })
+        .on("mousemove", function(event) {
+            tooltip.style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY + 10) + "px");
+        })
+        .on("mouseout", function() {
+            d3.select(this).style("stroke", "none");
+            tooltip.transition().duration(200).style("opacity", 0);
+            tooltip.style("visibility", "hidden");
+        });
+
+        points.attr("cx", function(d) {
+            const value = d[factor];
+            return xScale(value) + xScale.bandwidth() / 2; // Adjust the point position to the center of the x-axis category
+        })
+        .attr("cy", function(d) {
+            return yScale(d.Exam_Score);
+        });
+
+        points.exit().remove(); // Remove any old points
+    };
+
+    // Initialize the chart with the default factor
+    updateChart("Teacher_Quality");
+
+    // Listen for changes in the dropdown menu
+    d3.select("#factor").on("change", function () {
+        const selectedFactor = this.value; // Get the currently selected factor
+        console.log(`Factor changed to: ${selectedFactor}`); // Log the change
+        updateChart(selectedFactor); // Update the chart and the tooltip with the new factor
+    });
+});
+
+</script> 
+</body>
+</html>
